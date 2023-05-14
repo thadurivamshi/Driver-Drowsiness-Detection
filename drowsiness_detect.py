@@ -9,10 +9,18 @@ import pygame #For playing sound
 import time
 import dlib
 import cv2
+from playsound import playsound
+
 
 #Initialize Pygame and load music
 pygame.mixer.init()
-pygame.mixer.music.load('audio/alert.wav')
+
+# set the alarm duration in seconds
+alarm_duration = 3
+    
+# load the alarm sound file
+alarm_sound = pygame.mixer.Sound('./audio/alert.wav')
+# pygame.mixer.music.load('audio/alert.wav')
 
 #Minimum threshold of eye aspect ratio below which alarm is triggerd
 EYE_ASPECT_RATIO_THRESHOLD = 0.3
@@ -91,10 +99,14 @@ while(True):
             COUNTER += 1
             #If no. of frames is greater than threshold frames,
             if COUNTER >= EYE_ASPECT_RATIO_CONSEC_FRAMES:
-                pygame.mixer.music.play(-1)
+                alarm_sound.play()
+                time.sleep(0.5)
+                alarm_sound.stop()
+                # danger_alarm()
                 cv2.putText(frame, "You are Drowsy", (150,200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0,0,255), 2)
         else:
-            pygame.mixer.music.stop()
+            # pygame.mixer.music.stop()
+            alarm_sound.stop()
             COUNTER = 0
 
     #Show video feed
@@ -105,3 +117,6 @@ while(True):
 #Finally when video capture is over, release the video capture and destroyAllWindows
 video_capture.release()
 cv2.destroyAllWindows()
+
+
+
