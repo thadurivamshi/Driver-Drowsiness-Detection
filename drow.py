@@ -10,10 +10,77 @@ import time
 import dlib
 import cv2
 from playsound import playsound
+import face_recognition
+
+
+
+#Start webcam video capture
+video_capture = cv2.VideoCapture(0)
+who_is_driving_status="Camera started"
+
+def capture_screenshot():
+
+    # Check if the camera was opened successfully
+    if not video_capture.isOpened():
+        print("Unable to open camera")
+        return
+
+    # Read the first frame of the video stream
+    ret, frame = video_capture.read()
+
+    # Wait for a key press and take a screenshot if 's' is pressed
+    cv2.imwrite('past.jpg', frame)
+
+# First capture
+capture_screenshot()
+
+def check_if_person_changed() :
+    image1 = face_recognition.load_image_file("past.jpg")
+
+    # Read the first frame of the video stream
+    ret, frame = video_capture.read()
+
+    cv2.imwrite('past.jpg', frame)
+    image2 = face_recognition.load_image_file("past.jpg")
+
+    face_locations1 = face_recognition.face_locations(image1)
+    face_locations2 = face_recognition.face_locations(image2)
+
+    if face_locations2 :
+        if face_locations1 :
+            # Get the face encodings (feature vectors) for each image
+            encoding1 = face_recognition.face_encodings(image1)[0]
+            encoding2 = face_recognition.face_encodings(image2)[0]
+
+            # Compare the face encodings to see if they match
+            results = face_recognition.compare_faces([encoding1], encoding2)
+            print(results)
+
+            if results[0] == True :
+                return "Keep Driving"
+            
+            else :
+                return "Person change detected."
+
+        else :
+            return  "Driver not found"
+        
+    else :
+        return "Driver not found in capture area."
+
+
+
+
+
+
+
+
+
 font = cv2.FONT_HERSHEY_COMPLEX_SMALL
 
 #start the counter
 start_time = time.time()
+last_screenshot_time=time.time()
 
 
 #Initialize Pygame and load music
@@ -54,13 +121,21 @@ predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
 (lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS['left_eye']     
 (rStart, rEnd) = face_utils.FACIAL_LANDMARKS_IDXS['right_eye']    
 
-#Start webcam video capture
-video_capture = cv2.VideoCapture(0)
+
 
 #Give some time for camera to initialize(not required)
 time.sleep(2)
 
 while(True):
+    if(time.time()-last_screenshot_time>15):
+        last_screenshot_time=time.time()
+        who_is_driving_status=  check_if_person_changed()
+        print(who_is_driving_status)
+        if(who_is_driving_status=="Person change detected."):
+            with open("log.txt", "a") as f:
+                f.write("Person change detected\n"+str(time.time()-start_time))
+            start_time=time.time()
+
     #Read each frame and flip it, and convert to grayscale
     ret, frame = video_capture.read()
     frame = cv2.flip(frame,1)
@@ -79,6 +154,7 @@ while(True):
 
     #Detect facial points
     for face in faces:
+
 
         shape = predictor(gray, face)
         shape = face_utils.shape_to_np(shape)
@@ -129,6 +205,7 @@ while(True):
         minutes = (duration % 3600) // 60
         seconds = duration % 60
         cv2.putText(frame,'Duration '+str(hours)+":"+str(minutes)+":"+str(seconds),(width-200,height-20), font, 1,(255,255,255),1,cv2.LINE_AA)
+        cv2.putText(frame, who_is_driving_status ,(0,10), font, 1,(255,255,255),1,cv2.LINE_AA)
 
     #Show video feed
     cv2.imshow('Video', frame)
